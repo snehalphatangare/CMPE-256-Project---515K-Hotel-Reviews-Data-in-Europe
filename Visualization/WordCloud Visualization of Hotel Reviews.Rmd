@@ -1,0 +1,53 @@
+---
+title: "R Notebook for WordCloud visualization of hotel reviews"
+output: html_notebook
+---
+
+```{r WordCloud Visualization of Reviews}
+library(sqldf)
+library(ggplot2)
+library(wordcloud2)
+library(tm)
+df <- read.csv('/Users/snehalphatangare/Spring2018/CMPE256/Project/Hotel_Reviews.csv')
+hotelName <- "The Principal London"
+hotelData <- sqldf(sprintf('SELECT Positive_Review, Negative_Review,Hotel_Name from df where Hotel_Name="%s"',hotelName))
+reviews <- hotelData
+#result <- hotelData[1:3,]
+#print(hotelData)
+
+#Positive reviews
+reviews <- reviews[reviews$Positive_Review!='No Positive',]
+#Negative reviews
+reviews <- reviews[reviews$Negative_Review!='No Negative',]
+term_freq <- function(df,sent){
+  if(sent=='pos'){
+       corpus <- Corpus(VectorSource(df$Positive_Review))
+  }else{
+       corpus <- Corpus(VectorSource(df$Negative_Review))
+  }
+  #Clean the corpus
+  #Remove punctuation
+  corpus <- tm_map(corpus, removePunctuation)
+  # Convert corpus to lowercase
+  corpus <- tm_map(corpus, content_transformer(tolower))      
+  corpus <- tm_map(corpus, removeWords, stopwords("SMART"))
+  corpus <- tm_map(corpus, removeWords, stopwords("english"))
+  # Remove our custom vector of stop words from corpus
+  custom_stopwords <- c("the", "didn","can","could","couldn","couldnt","wasn","wasnt","also","use", "using","hotel","extremely","not","never","will","would","nice","excellent","good","perfect","great")
+  corpus <- tm_map(corpus, removeWords, custom_stopwords)                   
+                      
+  corpus <- tm_map(corpus, stripWhitespace)
+  dtm <-TermDocumentMatrix(corpus)
+  mat_dtm <- as.matrix(dtm)
+  v_dtm <- sort(rowSums(mat_dtm),decreasing = TRUE)
+  FreqMat <- data.frame(word = names(v_dtm), Freq = v_dtm)
+  FreqMat <- FreqMat[1:50,]
+  
+  return(FreqMat)
+}
+
+wordcloud2(data = term_freq(reviews,'pos'),minRotation = 0,maxRotation = 0)
+#NEgative review
+wordcloud2(data = term_freq(reviews,'neg'),minRotation = 0,maxRotation = 0)
+```
+
